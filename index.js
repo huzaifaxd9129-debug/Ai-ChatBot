@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, ActivityType } = require("discord.js");
 const { OpenAI } = require("openai");
 
 const client = new Client({
@@ -14,6 +14,9 @@ const client = new Client({
 // 🔥 PUT YOUR CHANNEL ID HERE
 const AI_CHANNEL_ID = "1499921455260106832";
 
+// 🔥 COOLDOWN (anti-spam)
+const cooldown = new Map();
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -21,14 +24,33 @@ const openai = new OpenAI({
 // ================= READY =================
 client.once("ready", () => {
   console.log(`🤖 AI Bot online as ${client.user.tag}`);
+
+  // ✅ STATUS ADDED
+  client.user.setPresence({
+    activities: [
+      {
+        name: "👑 Made By Huztro",
+        type: ActivityType.Playing
+      }
+    ],
+    status: "dnd"
+  });
 });
 
 // ================= AI CHAT =================
 client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
 
-  // ❌ ignore other channels
+  // ✅ Only specific channel
   if (msg.channel.id !== AI_CHANNEL_ID) return;
+
+  // ✅ Anti-spam cooldown (5 sec per user)
+  if (cooldown.has(msg.author.id)) {
+    return msg.react("⏳").catch(() => {});
+  }
+
+  cooldown.set(msg.author.id, true);
+  setTimeout(() => cooldown.delete(msg.author.id), 5000);
 
   const prompt = msg.content.trim();
   if (!prompt) return;
@@ -42,7 +64,7 @@ client.on("messageCreate", async (msg) => {
         {
           role: "system",
           content:
-            "You are a helpful Discord AI assistant. Reply naturally, short and clear."
+            "You are a helpful Discord AI assistant. Keep replies short, clean, and friendly."
         },
         {
           role: "user",
@@ -51,15 +73,15 @@ client.on("messageCreate", async (msg) => {
       ]
     });
 
-    const reply = res.choices[0].message.content;
+    const reply =
+      res?.choices?.[0]?.message?.content || "❌ No response";
 
-    msg.reply(
-      reply.length > 2000 ? reply.slice(0, 2000) : reply
-    );
+    await msg.reply(reply.slice(0, 2000));
 
   } catch (err) {
-    console.log(err);
-    msg.reply("❌ AI error occurred");
+    console.error("AI ERROR:", err);
+
+    msg.reply("❌ AI error — check API key or logs");
   }
 });
 
