@@ -1,8 +1,8 @@
 require("dotenv").config();
-
 const { Client, GatewayIntentBits, ActivityType } = require("discord.js");
-const { OpenAI } = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// --- DISCORD SETUP ---
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -11,21 +11,21 @@ const client = new Client({
   ]
 });
 
-// 🔥 PUT YOUR CHANNEL ID HERE
-const AI_CHANNEL_ID = "1499921455260106832";
-
-// 🔥 COOLDOWN (anti-spam)
+const AI_CHANNEL_ID = "1502814146943520809";
 const cooldown = new Map();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+// --- GEMINI SETUP ---
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Using gemini-1.5-flash for speed and low cost
+const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash",
+    systemInstruction: "You are a helpful Discord AI assistant. Keep replies short, clean, and friendly."
 });
 
 // ================= READY =================
 client.once("ready", () => {
-  console.log(`🤖 AI Bot online as ${client.user.tag}`);
+  console.log(`🤖 Gemini AI Bot online as ${client.user.tag}`);
 
-  // ✅ STATUS ADDED
   client.user.setPresence({
     activities: [
       {
@@ -58,30 +58,17 @@ client.on("messageCreate", async (msg) => {
   await msg.channel.sendTyping();
 
   try {
-    const res = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful Discord AI assistant. Keep replies short, clean, and friendly."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
-    });
+    // Generate content using Gemini
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const reply = response.text() || "❌ No response";
 
-    const reply =
-      res?.choices?.[0]?.message?.content || "❌ No response";
-
+    // Discord char limit check
     await msg.reply(reply.slice(0, 2000));
 
   } catch (err) {
-    console.error("AI ERROR:", err);
-
-    msg.reply("❌ AI error — check API key or logs");
+    console.error("GEMINI ERROR:", err);
+    msg.reply("❌ Gemini AI error — check API key or quota");
   }
 });
 
