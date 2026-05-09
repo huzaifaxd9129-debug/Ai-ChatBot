@@ -1,14 +1,17 @@
 {
-  "name": "ai-discord-bot",
+  "name": "huztro-ai-bot",
   "version": "1.0.0",
-  "description": "AI Channel Discord Bot",
+  "description": "Discord AI bot powered by Gemini",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.3",
-    "openai": "^4.0.0",
+    "@google/generative-ai": "^0.21.0",
+    "discord.js": "^14.14.1",
     "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
